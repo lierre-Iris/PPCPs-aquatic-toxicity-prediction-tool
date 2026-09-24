@@ -39,9 +39,9 @@ with st.form("prediction"):
     format_func=lambda n: f"{n} · {MEDIA[n]}",)
     endpoint = st.selectbox("终点类型（Endpoint Type）", ENDPOINTS, index=19,
                             format_func=lambda item: f"{item}（编码 {ENDPOINTS.index(item) + 1}）")
-    duration = st.number_input("平均观测时长（Observed Duration Mean；使用建模表原始数值单位）",
+    duration = st.number_input("平均观测时长（Observed Duration Mean；days）",
                                min_value=0.0, max_value=4.0, value=1.0, step=0.01,
-                               help="附件未说明单位。直接输入与 x5 一致的数值；训练范围为 0–4。")
+                               help="请输入以天为单位的平均观测时长,脊椎动物、无脊椎动物（轮虫除外）、轮虫、藻类分别不超过4天、2天、1天、3天；")
     submitted = st.form_submit_button("预测", type="primary")
 
 if submitted:
