@@ -22,26 +22,53 @@ except (OSError, ValueError) as exc:
     st.error(f"无法加载数据或模型：{exc}")
     st.stop()
 
-with st.form("prediction"):
-    cas = st.text_input("CAS 号", placeholder="例如 50-06-6")
-    species = st.selectbox("物种组（Species Group）", list(SPECIES),
-                           format_func=lambda n: f"{n} · {SPECIES[n]}")
-    exposure = st.selectbox("暴露类型（Exposure Type）", list(EXPOSURE),
-                            format_func=lambda n: f"{n} · {EXPOSURE[n]}")
-    MEDIA = {
+species = st.selectbox(
+    "物种组（Species Group）",
+    list(SPECIES),
+    format_func=lambda n: f"{n} · {SPECIES[n]}",
+)
+
+# 1 藻类；2 两栖动物；3 甲壳类；4 鱼类；5 昆虫
+MAX_DURATION_DAYS = {1: 3.0, 2: 4.0, 3: 2.0, 4: 4.0, 5: 2.0}
+max_duration = MAX_DURATION_DAYS[species]
+
+MEDIA = {
     1: "Fresh water",
     2: "Not reported",
     3: "Salt water",
-     }
+}
 
-    medium = st.selectbox("介质类型（Media Type）",
-    [1, 2, 3],
-    format_func=lambda n: f"{n} · {MEDIA[n]}",)
-    endpoint = st.selectbox("终点类型（Endpoint Type）", ENDPOINTS, index=19,
-                            format_func=lambda item: f"{item}（编码 {ENDPOINTS.index(item) + 1}）")
-    duration = st.number_input("平均观测时长（Observed Duration Mean；days）",
-                               min_value=0.0, max_value=4.0, value=1.0, step=0.01,
-                               help="请输入以天为单位的平均观测时长,脊椎动物、无脊椎动物（轮虫除外）、轮虫、藻类分别不超过4天、2天、1天、3天；")
+with st.form("prediction"):
+    cas = st.text_input("CAS 号", placeholder="例如 50-06-6")
+
+    exposure = st.selectbox(
+        "暴露类型（Exposure Type）",
+        list(EXPOSURE),
+        format_func=lambda n: f"{n} · {EXPOSURE[n]}",
+    )
+
+    medium = st.selectbox(
+        "介质类型（Media Type）",
+        [1, 2, 3],
+        format_func=lambda n: f"{n} · {MEDIA[n]}",
+    )
+
+    endpoint = st.selectbox(
+        "终点类型（Endpoint Type）",
+        ENDPOINTS,
+        index=19,
+        format_func=lambda item: f"{item}（编码 {ENDPOINTS.index(item) + 1}）",
+    )
+
+    duration = st.number_input(
+        "平均观测时长（Observed Duration Mean，days）",
+        min_value=0.0,
+        max_value=max_duration,
+        value=1.0,
+        step=0.01,
+    )
+    st.caption(f"当前物种组的平均观测时长上限：{max_duration:g} days。")
+
     submitted = st.form_submit_button("预测", type="primary")
 
 if submitted:
