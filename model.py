@@ -17,7 +17,7 @@ ENDPOINTS = [
     "IC20", "IC25", "IC50", "LC50", "LD50", "LOEC", "NOEC", "NR-LETH",
 ]
 SPECIES = {1: "Algae", 2: "Amphibians", 3: "Crustaceans", 4: "Fish", 5: "Insects"}
-EXPOSURE = {1: "Aquatuc（原始拼写，待核对）", 2: "Flow-through", 3: "Lotic",
+EXPOSURE = {1: "Aquatic", 2: "Flow-through", 3: "Lotic",
             4: "Pulse", 5: "Renewal", 6: "Static"}
 
 
