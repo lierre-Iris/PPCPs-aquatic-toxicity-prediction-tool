@@ -28,8 +28,15 @@ with st.form("prediction"):
                            format_func=lambda n: f"{n} · {SPECIES[n]}")
     exposure = st.selectbox("暴露类型（Exposure Type）", list(EXPOSURE),
                             format_func=lambda n: f"{n} · {EXPOSURE[n]}")
-    medium = st.selectbox("介质类型（Media Type）", [1, 2, 3],
-                          format_func=lambda n: f"编码 {n}（原表未提供名称）")
+    MEDIA = {
+    1: "Fresh water",
+    2: "Not reported",
+    3: "Salt water",
+     }
+
+    medium = st.selectbox("介质类型（Media Type）",
+    [1, 2, 3],
+    format_func=lambda n: f"{n} · {MEDIA[n]}",)
     endpoint = st.selectbox("终点类型（Endpoint Type）", ENDPOINTS, index=19,
                             format_func=lambda item: f"{item}（编码 {ENDPOINTS.index(item) + 1}）")
     duration = st.number_input("平均观测时长（Observed Duration Mean；使用建模表原始数值单位）",
