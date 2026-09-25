@@ -1,13 +1,62 @@
 """Streamlit entrypoint: streamlit run app.py"""
 
+import base64
+from pathlib import Path
+
 import streamlit as st
 
 from model import ENDPOINTS, EXPOSURE, SPECIES, load_data, predict, train_model
 
 
 st.set_page_config(page_title="PPCPs 水生效应浓度预测", page_icon="🧪", layout="centered")
-st.title("PPCPs 水生效应浓度预测")
-st.caption("输入 CAS 和五项试验条件；系统从随附的 CAS 表自动查找四种分子描述符。")
+background_path = Path(__file__).parent / "assets" / "ppcp_background.jpg"
+background_base64 = base64.b64encode(background_path.read_bytes()).decode()
+
+st.markdown(
+    f"""
+    <style>
+    .ppcp-hero {{
+        background-image:
+            linear-gradient(
+                90deg,
+                rgba(247, 250, 252, 0.96) 0%,
+                rgba(247, 250, 252, 0.88) 62%,
+                rgba(247, 250, 252, 0.35) 100%
+            ),
+            url("data:image/jpeg;base64,{background_base64}");
+        background-size: cover;
+        background-position: center;
+        border-radius: 20px;
+        padding: 36px 32px;
+        margin-bottom: 28px;
+        min-height: 210px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+    }}
+
+    .ppcp-hero h1 {{
+        color: #183247;
+        font-size: clamp(2rem, 4vw, 3.2rem);
+        line-height: 1.18;
+        margin: 0 0 16px 0;
+    }}
+
+    .ppcp-hero p {{
+        color: #38576a;
+        font-size: 1.08rem;
+        line-height: 1.6;
+        margin: 0;
+    }}
+    </style>
+
+    <div class="ppcp-hero">
+        <h1>PPCPs 水生效应浓度预测</h1>
+        <p>输入 CAS 和五项试验条件；系统从随附的 CAS 表自动查找四种分子描述符。</p>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
 
 
 @st.cache_resource(show_spinner="首次打开时正在训练随机森林模型…")
