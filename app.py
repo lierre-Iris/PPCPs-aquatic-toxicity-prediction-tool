@@ -9,7 +9,7 @@ from model import ENDPOINTS, EXPOSURE, SPECIES, load_data, predict, train_model
 
 
 st.set_page_config(page_title="PPCPs 水生效应浓度预测", page_icon="🧪", layout="centered")
-background_path = Path(__file__).parent / "assets" / "ppcp_background.jpg"
+background_path = Path(__file__).parent / "assets" / "asset.png"
 background_base64 = base64.b64encode(background_path.read_bytes()).decode()
 
 st.markdown(
