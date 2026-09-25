@@ -14,22 +14,25 @@ background_base64 = base64.b64encode(background_path.read_bytes()).decode()
 
 st.markdown(
     f"""
-    <style>
+        <style>
     .ppcp-hero {{
         background-image:
             linear-gradient(
                 90deg,
-                rgba(247, 250, 252, 0.96) 0%,
-                rgba(247, 250, 252, 0.88) 62%,
-                rgba(247, 250, 252, 0.35) 100%
+                rgba(247, 250, 252, 0.94) 0%,
+                rgba(247, 250, 252, 0.82) 55%,
+                rgba(247, 250, 252, 0.25) 100%
             ),
             url("data:image/png;base64,{background_base64}");
         background-size: cover;
         background-position: center;
-        border-radius: 20px;
-        padding: 36px 32px;
-        margin-bottom: 28px;
-        min-height: 210px;
+        box-sizing: border-box;
+        width: 100vw;
+        margin-left: calc(50% - 50vw);
+        min-height: 230px;
+        padding: 38px max(24px, calc((100vw - 900px) / 2));
+        border-radius: 0;
+        margin-bottom: 32px;
         display: flex;
         flex-direction: column;
         justify-content: center;
@@ -37,16 +40,17 @@ st.markdown(
 
     .ppcp-hero h1 {{
         color: #183247;
-        font-size: clamp(2rem, 4vw, 3.2rem);
-        line-height: 1.18;
-        margin: 0 0 16px 0;
+        font-size: clamp(2rem, 3vw, 2.8rem);
+        line-height: 1.2;
+        margin: 0 0 14px 0;
     }}
 
     .ppcp-hero p {{
         color: #38576a;
         font-size: 1.08rem;
-        line-height: 1.6;
+        line-height: 1.5;
         margin: 0;
+        max-width: 850px;
     }}
     </style>
 
