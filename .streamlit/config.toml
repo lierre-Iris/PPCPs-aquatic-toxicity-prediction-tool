@@ -5,3 +5,7 @@ backgroundColor = "#F7FAFC"
 secondaryBackgroundColor = "#EAF3F5"
 textColor = "#183247"
 font = "sans-serif"
+
+baseFontSize = 18
+headingFontSizes = ["3rem", "2.4rem", "1.9rem"]
+metricValueFontSize = "2.75rem"
