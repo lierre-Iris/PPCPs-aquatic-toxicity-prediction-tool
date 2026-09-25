@@ -77,14 +77,35 @@ if submitted:
                                          medium, endpoint, duration)
     except ValueError as exc:
         st.error(str(exc))
-    else:
-        st.success(f"预测的 log 转换效应浓度：{log_value:.4f}")
-        st.write("自动查得的描述符：")
-        st.dataframe({"描述符": list(descriptors), "数值": list(descriptors.values())},
-                     hide_index=True, use_container_width=True)
-        st.info("原始工作簿未注明对数底数和效应浓度单位，因此此处仅报告 log 尺度预测值；"
-                "核对建模时的 log 定义与原始浓度单位后，才能可靠地换算成浓度。")
+     else:
+        concentration_mg_l = 10.0 ** log_value
+
+        with st.container(border=True):
+            st.subheader("预测结果")
+            st.metric(
+                "预测效应浓度",
+                f"{concentration_mg_l:.4g} mg/L",
+            )
+            st.write(f"对应的 log10 值：**{log_value:.4f}**")
+            st.caption(
+                f"结果对应的终点为 {endpoint}；"
+                f"物种组为 {SPECIES[species]}。"
+            )
+
+        with st.expander("查看 CAS 自动匹配的分子描述符"):
+            st.dataframe(
+                {
+                    "描述符": list(descriptors),
+                    "数值": list(descriptors.values()),
+                },
+                hide_index=True,
+                use_container_width=True,
+            )
 
 st.divider()
-st.caption("本程序按给定训练数据重新拟合随机森林；原 RF 的超参数未随附件提供，预测结果不等同于原表 y1。"
-           "不同终点表示不同效应水平，所得浓度应连同终点及试验条件一起解释。")
+st.caption(
+    "本程序根据给定训练数据重新拟合随机森林；原 RF 的超参数未随附件提供，"
+    "因此预测结果不等同于原表 y1。模型输出为效应浓度（mg/L）的 log10 值，"
+    "页面同时显示按 10 的幂反变换后的浓度（mg/L）。"
+    "不同终点表示不同效应水平，结果应连同终点及试验条件一起解释。"
+)
