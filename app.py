@@ -73,11 +73,13 @@ with st.form("prediction"):
 
 if submitted:
     try:
-        log_value, descriptors = predict(model, lookup, cas, species, exposure,
-                                         medium, endpoint, duration)
+        log_value, descriptors = predict(
+            model, lookup, cas, species, exposure,
+            medium, endpoint, duration
+        )
     except ValueError as exc:
         st.error(str(exc))
-     else:
+    else:
         concentration_mg_l = 10.0 ** log_value
 
         with st.container(border=True):
