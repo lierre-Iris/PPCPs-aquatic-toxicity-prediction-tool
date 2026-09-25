@@ -9,7 +9,7 @@ from model import ENDPOINTS, EXPOSURE, SPECIES, load_data, predict, train_model
 
 
 st.set_page_config(page_title="PPCPs 水生效应浓度预测", page_icon="🧪", layout="centered")
-background_path = Path(__file__).parent / "assets" / "asset.png"
+background_path = Path(__file__).parent / "asset" / "asset.png"
 background_base64 = base64.b64encode(background_path.read_bytes()).decode()
 
 st.markdown(
@@ -23,7 +23,7 @@ st.markdown(
                 rgba(247, 250, 252, 0.88) 62%,
                 rgba(247, 250, 252, 0.35) 100%
             ),
-            url("data:image/jpeg;base64,{background_base64}");
+            url("data:image/png;base64,{background_base64}");
         background-size: cover;
         background-position: center;
         border-radius: 20px;
