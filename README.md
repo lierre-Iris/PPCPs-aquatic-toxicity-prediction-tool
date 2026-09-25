@@ -36,16 +36,18 @@ streamlit run app.py
 | 输入 | 数据列 | 界面处理 |
 | --- | --- | --- |
 | Species Group | `x1` | 1 Algae；2 Amphibians；3 Crustaceans；4 Fish；5 Insects |
-| Exposure Type | `x2` | 1 Aquatuc（沿用此前提供的原始拼写，须核对）；2 Flow-through；3 Lotic；4 Pulse；5 Renewal；6 Static |
-| Media Type | `x3` | 1、2、3；附件没有给出名称，请对照原始数据字典选择 |
+| Exposure Type | `x2` | 1 Aquatic；2 Flow-through；3 Lotic；4 Pulse；5 Renewal；6 Static |
+| Media Type | `x3` | 1 Fresh water；2 Not reported；3 Salt water |
 | Endpoint Type | `x4` | 按下方列表由 1 到 24 编码 |
-| Observed Duration Mean | `x5` | 原始建模数值；训练范围 0–4；附件未注明时间单位 |
+| Observed Duration Mean | `x5` | 单位为 days；输入上限随所选物种组变化 |
 | CAS 自动查找 | `x6`–`x9` | 依次是 AAC、SpPosA_B(m)、SpMax5_Bh(m)、P_VSA_v_3 |
-| 目标 | `y` | log 转换后的效应浓度；`y1` 不参与训练 |
+| 目标 | `y` | 效应浓度（mg/L）的 log10 转换值；`y1` 不参与训练 |
+
+当前界面根据所选物种组限制平均观测时长：藻类不超过 3 days，两栖动物和鱼类不超过 4 days，甲壳类和昆虫不超过 2 days。模型的物种组中未单列轮虫。
 
 终点编码依次为：1 BMC05；2 BMC20；3 ECO；4 EC05；5 EC10；6 EC100；7 EC16；8 EC20；9 EC25；10 EC50；11 EC80；12 EC84；13 EC90；14 ER50；15 ET50；16 IC10；17 IC20；18 IC25；19 IC50；20 LC50；21 LD50；22 LOEC；23 NOEC；24 NR-LETH。
 
-**输出目前仅为 log 尺度**。附件无法证明 `y` 的对数底数及原始浓度单位，不能擅自标成 mg/L 或计算 `10^y`。确定原始转换公式后，可在 `app.py` 增加反变换及单位标注。各种终点对应不同的效应定义，预测值应与终点和实验条件一起报告；log 值越高，对应达到该终点所需浓度越高，并不表示毒性效力越高。
+**输出目前仅为 log 尺度**。**输出定义：**模型训练目标 y 是以 mg/L 为单位表示的效应浓度的 log10 转换值。若预测的 log10 值为 \(p\)，则反变换后的效应浓度为 \(10^p\) mg/L。网页同时显示这两个数值。不同终点对应不同效应定义，因此报告预测浓度时应同时注明终点类型、物种组和试验条件；对于同一终点及可比条件，达到效应所需浓度越高，通常表示毒性效力越低。
 
 ## 关于 RF 和性能
 
