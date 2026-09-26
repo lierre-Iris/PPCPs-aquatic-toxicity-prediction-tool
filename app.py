@@ -94,3 +94,58 @@ with st.form("prediction"):
         "暴露类型（Exposure Type）", list(EXPOSURE),
         format_func=lambda n: f"{n} · {EXPOSURE[n]}",
     )
+    medium = st.selectbox(
+        "介质类型（Media Type）",
+        list(MEDIA),
+        format_func=lambda n: f"{n} · {MEDIA[n]}",
+    )
+
+    endpoint = st.selectbox(
+        "终点类型（Endpoint Type）",
+        ENDPOINTS,
+        index=19,
+        format_func=lambda item: f"{item}（编码 {ENDPOINTS.index(item) + 1}）",
+    )
+
+    duration = st.number_input(
+        "平均观测时长（Observed Duration Mean，days）",
+        min_value=0.0,
+        max_value=max_duration,
+        value=1.0,
+        step=0.01,
+    )
+    st.caption(f"当前物种组的平均观测时长上限：{max_duration:g} days。")
+    submitted = st.form_submit_button("预测", type="primary")
+
+if submitted:
+    try:
+        log_value, descriptors = predict(
+            model, lookup, cas, species, exposure, medium, endpoint, duration
+        )
+    except ValueError as exc:
+        st.error(str(exc))
+    else:
+        concentration_mg_l = 10.0 ** log_value
+        with st.container(border=True):
+            st.subheader("预测结果")
+            st.metric("预测效应浓度", f"{concentration_mg_l:.4g} mg/L")
+            st.write(f"对应的 log10 值：**{log_value:.4f}**")
+            st.caption(
+                f"结果对应的终点为 {endpoint}；"
+                f"物种组为 {SPECIES[species]}。"
+            )
+
+        with st.expander("查看 CAS 自动匹配的分子描述符"):
+            st.dataframe(
+                {"描述符": list(descriptors), "数值": list(descriptors.values())},
+                hide_index=True,
+                use_container_width=True,
+            )
+
+st.divider()
+st.caption(
+    "本程序根据给定训练数据重新拟合随机森林；原 RF 的超参数未随附件提供，"
+    "因此预测结果不等同于原表 y1。模型输出为效应浓度（mg/L）的 log10 值，"
+    "页面同时显示按 10 的幂反变换后的浓度（mg/L）。"
+    "不同终点表示不同效应水平，结果应连同终点及试验条件一起解释。"
+)
