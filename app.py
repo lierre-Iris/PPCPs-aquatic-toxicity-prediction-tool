@@ -1,8 +1,6 @@
 """PPCPs aquatic effect concentration predictor."""
 
 import base64
-import csv
-from io import StringIO
 from pathlib import Path
 
 import streamlit as st
@@ -74,23 +72,25 @@ def show_header():
     )
 
 
-def result_csv(cas, species, exposure, medium, endpoint, duration,
-               log_value, concentration, descriptors):
-    columns = [
-        "CAS", "species_group", "exposure_type", "media_type",
-        "endpoint_type", "duration_days", "predicted_log10_mg_L",
-        "predicted_mg_L", *descriptors,
-    ]
-    values = [
-        cas.strip(), species, exposure, medium, endpoint, duration,
-        log_value, concentration, *descriptors.values(),
-    ]
-    output = StringIO()
-    writer = csv.writer(output)
-    writer.writerow(columns)
-    writer.writerow(values)
-    return output.getvalue().encode("utf-8-sig")
-
-
 st.set_page_config(page_title="PPCPs 水生效应浓度预测", page_icon="🧪", layout="centered")
 show_header()
+
+try:
+    model, lookup = get_model()
+except (OSError, ValueError) as exc:
+    st.error(f"无法加载数据或模型：{exc}")
+    st.stop()
+
+species = st.selectbox(
+    "物种组（Species Group）",
+    list(SPECIES),
+    format_func=lambda n: f"{n} · {SPECIES[n]}",
+)
+max_duration = MAX_DURATION_DAYS[species]
+
+with st.form("prediction"):
+    cas = st.text_input("CAS 号", placeholder="例如 50-06-6")
+    exposure = st.selectbox(
+        "暴露类型（Exposure Type）", list(EXPOSURE),
+        format_func=lambda n: f"{n} · {EXPOSURE[n]}",
+    )
