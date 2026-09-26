@@ -94,7 +94,7 @@ def show_result(log_value, descriptors, cas, species, endpoint, exposure, medium
         file_name="ppcp_prediction.csv", mime="text/csv",
     )
     with st.expander("查看自动匹配的四种分子描述符"):
-    st.dataframe(
+        st.dataframe(
             pd.DataFrame({"描述符": list(descriptors), "数值": list(descriptors.values())}),
             hide_index=True, use_container_width=True,
         )
