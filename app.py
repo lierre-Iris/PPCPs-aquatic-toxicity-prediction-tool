@@ -124,6 +124,41 @@ def show_header():
             }}
             .ppcp-hero {{ padding: 18px; }}
         }}
+
+        /* Selected sidebar radio text and circle. */
+        [data-testid="stSidebar"] [data-testid="stRadio"] label:has(input:checked),
+        [data-testid="stSidebar"] [data-testid="stRadio"] label:has(input:checked) p,
+        [data-testid="stSidebar"] [data-testid="stRadio"] label:has(input:checked) span {{
+            color: #DF2570 !important;
+        }}
+        [data-testid="stSidebar"] label[data-baseweb="radio"]:has(input:checked) > div:first-of-type {{
+            background-color: #DF2570 !important;
+            border-color: #DF2570 !important;
+        }}
+        [data-testid="stSidebar"] [data-testid="stRadio"] input[type="radio"] {{
+            accent-color: #DF2570;
+        }}
+
+        /* Titles of the six prediction inputs. */
+        :is(.st-key-single_cas, .st-key-single_species, .st-key-single_exposure, .st-key-single_medium, .st-key-single_endpoint, .st-key-duration_1, .st-key-duration_2, .st-key-duration_3, .st-key-duration_4, .st-key-duration_5) [data-testid="stWidgetLabel"],
+        :is(.st-key-single_cas, .st-key-single_species, .st-key-single_exposure, .st-key-single_medium, .st-key-single_endpoint, .st-key-duration_1, .st-key-duration_2, .st-key-duration_3, .st-key-duration_4, .st-key-duration_5) [data-testid="stWidgetLabel"] p {{
+            color: #DF2570 !important;
+        }}
+
+        /* Selected dropdown values, CAS text and duration values. */
+        :is(.st-key-single_cas, .st-key-single_species, .st-key-single_exposure, .st-key-single_medium, .st-key-single_endpoint, .st-key-duration_1, .st-key-duration_2, .st-key-duration_3, .st-key-duration_4, .st-key-duration_5) [data-baseweb="select"] div,
+        :is(.st-key-single_cas, .st-key-single_species, .st-key-single_exposure, .st-key-single_medium, .st-key-single_endpoint, .st-key-duration_1, .st-key-duration_2, .st-key-duration_3, .st-key-duration_4, .st-key-duration_5) input {{
+            color: #EF90B6 !important;
+        }}
+        :is(.st-key-single_cas, .st-key-single_species, .st-key-single_exposure, .st-key-single_medium, .st-key-single_endpoint, .st-key-duration_1, .st-key-duration_2, .st-key-duration_3, .st-key-duration_4, .st-key-duration_5) input {{
+            -webkit-text-fill-color: #EF90B6 !important;
+            caret-color: #DF2570;
+        }}
+        :is(.st-key-single_cas, .st-key-single_species, .st-key-single_exposure, .st-key-single_medium, .st-key-single_endpoint, .st-key-duration_1, .st-key-duration_2, .st-key-duration_3, .st-key-duration_4, .st-key-duration_5) input::placeholder {{
+            color: #EF90B6 !important;
+            -webkit-text-fill-color: #EF90B6 !important;
+            opacity: 1;
+        }}
         </style>
         <div class="ppcp-hero"><h1>{title}</h1><p>{intro}</p></div>
         """,
