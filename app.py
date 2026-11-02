@@ -36,10 +36,6 @@ def t(chinese, english):
     return english if LANGUAGE == "English" else chinese
 
 
-def clear_results():
-    st.session_state.pop("batch_result", None)
-
-
 def error_text(exc):
     if hasattr(exc, "english"):
         return t(str(exc), exc.english)
@@ -58,84 +54,74 @@ def show_header():
         ROOT / "assets" / "asset.png",
         ROOT / "assets" / "ppcp_background.jpg",
     ]
-    image = next(
-        (path for path in candidates if path.is_file()),
-        None,
-    )
+    background = "linear-gradient(110deg, #edf7fa, #e4f0f5)"
+    image = next((path for path in candidates if path.is_file()), None)
+    if image is not None:
+        try:
+            mime = "image/png" if image.suffix.lower() == ".png" else "image/jpeg"
+            encoded = base64.b64encode(image.read_bytes()).decode("ascii")
+            background = (
+                "linear-gradient(90deg, rgba(247,250,252,.97), "
+                "rgba(247,250,252,.85), rgba(247,250,252,.45)), "
+                f'url("data:{mime};base64,{encoded}")'
+            )
+        except OSError:
+            pass
 
-    title = t(
-        "PPCPs 水生效应浓度预测",
-        "PPCPs Aquatic Effect Concentration Predictor",
-    )
-    intro = t(
-        "输入 CAS 和试验条件，自动查找四种分子描述符并预测相应终点的效应浓度。",
-        "Enter a CAS number and test conditions to retrieve four molecular "
-        "descriptors and predict the selected endpoint concentration.",
-    )
-
-    if image is None:
-        st.title(title)
-        st.caption(intro)
-        return
-
-    mime = (
-        "image/png"
-        if image.suffix.lower() == ".png"
-        else "image/jpeg"
-    )
-
-    try:
-        encoded = base64.b64encode(image.read_bytes()).decode("ascii")
-    except OSError:
-        st.title(title)
-        st.caption(intro)
-        return
-
+    title = t("PPCPs 水生效应浓度预测",
+              "PPCPs Aquatic Effect Concentration Predictor")
+    intro = t("输入 CAS 与试验条件，自动匹配四种分子描述符并预测效应浓度。",
+              "Enter a CAS number and test conditions to predict effect concentration.")
     st.markdown(
         f"""
         <style>
+        [data-testid="stMainBlockContainer"], .main .block-container {{
+            max-width: 1440px;
+            padding: 3.5rem 2rem 1.5rem;
+        }}
         .ppcp-hero {{
-            background-image:
-                linear-gradient(
-                    90deg,
-                    rgba(247,250,252,.96) 0%,
-                    rgba(247,250,252,.88) 57%,
-                    rgba(247,250,252,.30) 100%
-                ),
-                url("data:{mime};base64,{encoded}");
+            background-image: {background};
             background-size: cover;
             background-position: center;
             box-sizing: border-box;
-            width: 100vw;
-            margin-left: calc(50% - 50vw);
-            min-height: 230px;
-            padding: 38px max(24px, calc((100vw - 900px) / 2));
-            margin-bottom: 28px;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
+            width: 100%;
+            min-height: 110px;
+            padding: 20px 26px;
+            margin: 0 0 6px;
+            border: 1px solid #dce9ee;
+            border-radius: 14px;
         }}
-
         .ppcp-hero h1 {{
             color: #183247;
-            font-size: clamp(2rem, 3vw, 2.8rem);
-            line-height: 1.2;
-            margin: 0 0 14px;
+            font-size: clamp(1.35rem, 2vw, 1.85rem);
+            line-height: 1.25;
+            margin: 0 0 8px;
+            padding: 0;
         }}
-
         .ppcp-hero p {{
             color: #38576a;
-            font-size: 1.08rem;
-            line-height: 1.5;
+            font-size: .95rem;
+            line-height: 1.45;
             margin: 0;
-            max-width: 850px;
+        }}
+        [data-testid="stMainBlockContainer"] h3 {{
+            font-size: 1.25rem;
+            padding-top: .2rem;
+            padding-bottom: .3rem;
+        }}
+        [data-testid="stForm"] {{
+            padding: 14px 18px;
+            border-radius: 12px;
+        }}
+        @media (max-width: 760px) {{
+            [data-testid="stMainBlockContainer"], .main .block-container {{
+                padding-left: 1rem;
+                padding-right: 1rem;
+            }}
+            .ppcp-hero {{ padding: 18px; }}
         }}
         </style>
-
-        <div class="ppcp-hero">
-            <h1>{title}</h1>
-            <p>{intro}</p>
-        </div>
+        <div class="ppcp-hero"><h1>{title}</h1><p>{intro}</p></div>
         """,
         unsafe_allow_html=True,
     )
@@ -304,18 +290,13 @@ def batch_predict(model, lookup, source):
 
 
 st.set_page_config(
-    page_title="PPCPs | Predictor",
-    page_icon="🧪",
-    layout="centered",
+    page_title="PPCPs | Predictor", page_icon="🧪",
+    layout="wide", initial_sidebar_state="expanded",
 )
 
-st.radio(
-    "语言 / Language",
-    ["中文", "English"],
-    key="language",
-    horizontal=True,
-    on_change=clear_results,
-)
+with st.sidebar:
+    st.markdown("## 🧪 PPCPs")
+    LANGUAGE = st.radio("语言 / Language", ["中文", "English"], key="language")
 
 SPECIES_ZH = {
     1: "藻类",
@@ -356,234 +337,202 @@ MEDIA_LABELS = {
     for code, name in MEDIA_EN.items()
 }
 
-show_header()
 
-st.info(t(
-    "① 选择单条或批量预测 → ② 填写 CAS 与试验条件 → ③ 查看并下载结果",
-    "1. Choose single or batch prediction → "
-    "2. Enter CAS and test conditions → "
-    "3. View and download results",
-))
+pages = {
+    "single": t("🧪 单条预测", "🧪 Single prediction"),
+    "batch": t("📄 批量预测", "📄 Batch prediction"),
+    "about": t("📖 模型与数据", "📖 Model and data"),
+}
 
-try:
-    with st.spinner(t(
-        "首次打开时正在训练随机森林模型…",
-        "Training the random forest on first use…",
-    )):
-        model, lookup = get_model()
-except (OSError, ValueError) as exc:
-    st.error(
-        t("无法加载模型或数据：", "Unable to load model or data: ")
-        + error_text(exc)
+with st.sidebar:
+    st.divider()
+    page = st.radio(
+        t("功能导航", "Navigation"), list(pages),
+        format_func=lambda code: pages[code], key="navigation",
     )
-    st.stop()
-
-single_tab, batch_tab, about_tab = st.tabs([
-    t("🧪 单条预测", "🧪 Single prediction"),
-    t("📄 批量预测", "📄 Batch prediction"),
-    t("📖 模型与数据", "📖 Model and data"),
-])
-
-with single_tab:
-    st.subheader(t("填写预测条件", "Enter prediction conditions"))
-
-    st.caption(t(
-        f"当前描述符表可匹配 {len(lookup)} 个 CAS；仅对表内化合物提供预测。",
-        f"The descriptor table contains {len(lookup)} CAS numbers; "
-        "predictions are available only for listed compounds.",
+    st.divider()
+    st.caption(t("使用步骤", "Quick start"))
+    st.write(t(
+        "① 选择预测方式\n\n② 填写 CAS 和试验条件\n\n③ 查看并下载结果",
+        "① Choose a prediction mode\n\n② Enter CAS and test conditions"
+        "\n\n③ View and download results",
     ))
 
-    cas = st.text_input(
-        t("CAS 号", "CAS number"),
-        placeholder=t("例如 50-06-6", "e.g. 50-06-6"),
-        key="single_cas",
-    )
+show_header()
 
-    if cas.strip():
-        if not valid_cas(cas.strip()):
-            st.warning(t(
-                "CAS 格式或校验位不正确。",
-                "Invalid CAS format or check digit.",
-            ))
-        elif cas.strip() not in lookup.index:
-            st.warning(t(
-                "此 CAS 不在当前描述符表中，暂时无法预测。",
-                "This CAS number is not in the descriptor table; "
-                "prediction is unavailable.",
-            ))
-        else:
-            st.caption(t(
-                "✓ 已找到此 CAS 对应的四种分子描述符。",
-                "✓ Four molecular descriptors found for this CAS number.",
-            ))
+try:
+    with st.spinner(t("正在加载数据和模型，首次打开需要训练…",
+                      "Loading data and model; training is required on first use…")):
+        model, lookup = get_model()
+except (OSError, ValueError) as exc:
+    st.error(t("无法加载模型或数据：", "Unable to load model or data: ")
+             + error_text(exc))
+    st.stop()
 
-    species = st.selectbox(
-        t("物种组（Species Group）", "Species group"),
-        list(SPECIES),
-        format_func=lambda n: f"{n} · {SPECIES_LABELS[n]}",
-    )
+if page == "single":
+    st.subheader(t("填写预测条件", "Enter prediction conditions"))
+    st.caption(t(
+        f"描述符表包含 {len(lookup)} 个 CAS；仅支持表内化合物。",
+        f"The descriptor table contains {len(lookup)} CAS numbers; "
+        "only listed compounds are supported.",
+    ))
+
+    left, right = st.columns(2, gap="medium")
+    with left:
+        cas = st.text_input(t("CAS 号", "CAS number"),
+                            placeholder=t("例如 50-06-6", "e.g. 50-06-6"),
+                            key="single_cas")
+    with right:
+        species = st.selectbox(
+            t("物种组", "Species group"), list(SPECIES),
+            format_func=lambda n: f"{n} · {SPECIES_LABELS[n]}",
+            key="single_species",
+        )
     max_duration = MAX_DURATION_DAYS[species]
 
+    # Species is outside the form so its duration limit updates immediately.
     with st.form("single_prediction"):
-        exposure = st.selectbox(
-            t("暴露类型（Exposure Type）", "Exposure type"),
-            list(EXPOSURE),
-            format_func=lambda n: f"{n} · {EXPOSURE_LABELS[n]}",
-        )
-
-        medium = st.selectbox(
-            t("介质类型（Media Type）", "Media type"),
-            list(MEDIA_EN),
-            format_func=lambda n: f"{n} · {MEDIA_LABELS[n]}",
-        )
-
-        endpoint = st.selectbox(
-            t("终点类型（Endpoint Type）", "Endpoint type"),
-            ENDPOINTS,
-            index=19,
-            format_func=lambda name: (
-                f"{name} "
-                + t(
-                    f"（编码 {ENDPOINTS.index(name) + 1}）",
-                    f"(code {ENDPOINTS.index(name) + 1})",
-                )
-            ),
-        )
-
-        duration = st.number_input(
-            t(
-                "平均观测时长（天）",
-                "Mean observed duration (days)",
-            ),
-            min_value=0.0,
-            max_value=max_duration,
-            value=1.0,
-            step=0.01,
-        )
-
+        left, right = st.columns(2, gap="medium")
+        with left:
+            exposure = st.selectbox(
+                t("暴露类型", "Exposure type"), list(EXPOSURE),
+                format_func=lambda n: f"{n} · {EXPOSURE_LABELS[n]}",
+                key="single_exposure",
+            )
+        with right:
+            medium = st.selectbox(
+                t("介质类型", "Media type"), list(MEDIA_EN),
+                format_func=lambda n: f"{n} · {MEDIA_LABELS[n]}",
+                key="single_medium",
+            )
+        left, right = st.columns(2, gap="medium")
+        with left:
+            endpoint = st.selectbox(
+                t("终点类型", "Endpoint type"), ENDPOINTS,
+                index=ENDPOINTS.index("LC50") if "LC50" in ENDPOINTS else 0,
+                format_func=lambda name: (
+                    f"{name} · " + t("编码 ", "Code ")
+                    + str(ENDPOINTS.index(name) + 1)
+                ),
+                key="single_endpoint",
+            )
+        with right:
+            duration = st.number_input(
+                t("平均观测时长（天）", "Mean observed duration (days)"),
+                min_value=0.0, max_value=float(max_duration),
+                value=1.0, step=0.01, key=f"duration_{species}",
+            )
         st.caption(t(
-            f"所选物种组的时长上限：{max_duration:g} 天。",
-            f"Duration limit for the selected species group: "
-            f"{max_duration:g} days.",
+            f"当前物种组：{SPECIES_LABELS[species]}；允许时长：0–{max_duration:g} 天。",
+            f"Selected group: {SPECIES_LABELS[species]}; "
+            f"allowed duration: 0–{max_duration:g} days.",
         ))
-
         submitted = st.form_submit_button(
-            t("预测", "Predict"),
-            type="primary",
+            t("开始预测", "Predict"), type="primary", use_container_width=True,
         )
+
+    clean_cas = cas.strip()
+    if clean_cas and not submitted:
+        if not valid_cas(clean_cas):
+            st.warning(t("CAS 格式或校验位不正确。", "Invalid CAS format or check digit."))
+        elif clean_cas not in lookup.index:
+            st.warning(t("此 CAS 不在当前描述符表中。",
+                         "This CAS number is not in the descriptor table."))
+        else:
+            st.caption(t("✓ 已匹配四种分子描述符。", "✓ Four molecular descriptors matched."))
 
     if submitted:
+        st.session_state.pop("single_result", None)
         try:
             log_value, descriptors = predict(
-                model, lookup, cas, species,
-                exposure, medium, endpoint, duration,
+                model, lookup, clean_cas, species, exposure, medium, endpoint, duration,
             )
         except ValueError as exc:
             st.error(error_text(exc))
         else:
-            show_result(
-                log_value, descriptors, cas.strip(), species,
-                endpoint, exposure, medium, duration,
+            st.session_state["single_result"] = dict(
+                log_value=log_value, descriptors=descriptors, cas=clean_cas,
+                species=species, endpoint=endpoint, exposure=exposure,
+                medium=medium, duration=duration,
             )
 
-with batch_tab:
-    st.subheader(t(
-        "CSV 批量预测",
-        "Batch prediction from CSV",
-    ))
-
-    st.write(t(
-        "下载模板，按行填写 CAS 和五项试验条件，再上传 CSV。"
-        "每次最多 200 行；错误行在结果中说明原因。",
-        "Download the template, enter CAS numbers and five test conditions, "
-        "and upload the CSV. Up to 200 rows per upload; "
-        "errors are reported for each invalid row.",
-    ))
-
-    example = pd.DataFrame(
-        [["50-06-6", 3, 1, 3, "LC50", 1.0]],
-        columns=BATCH_COLUMNS,
-    )
-
-    st.download_button(
-        t("下载 CSV 模板", "Download CSV template"),
-        example.to_csv(index=False).encode("utf-8-sig"),
-        file_name="ppcp_batch_template.csv",
-        mime="text/csv",
-    )
-
-    upload = st.file_uploader(
-        t("上传填好的 CSV 文件", "Upload the completed CSV"),
-        type=["csv"],
-    )
-
-    batch_submitted = st.button(
-        t("批量预测", "Run batch prediction"),
-        type="primary",
-    )
-
-    if batch_submitted:
-        if upload is None:
-            st.error(t(
-                "请先上传 CSV 文件。",
-                "Please upload a CSV file first.",
-            ))
-        else:
-            try:
-                frame = pd.read_csv(
-                    upload,
-                    dtype={"CAS": str},
-                    encoding="utf-8-sig",
-                )
-                st.session_state["batch_result"] = batch_predict(
-                    model, lookup, frame,
-                )
-            except (
-                OSError,
-                UnicodeError,
-                pd.errors.ParserError,
-                ValueError,
-            ) as exc:
-                st.session_state.pop("batch_result", None)
-                st.error(
-                    t("无法处理文件：", "Unable to process file: ")
-                    + error_text(exc)
-                )
-
-    if "batch_result" in st.session_state:
-        result = st.session_state["batch_result"]
-        successful = result["error"].eq("").sum()
-        failed = len(result) - successful
-
-        st.write(t(
-            f"成功 {successful} 行；有错误 {failed} 行。",
-            f"Successful rows: {successful}; invalid rows: {failed}.",
+    if "single_result" in st.session_state:
+        st.caption(t(
+            "以下为上次成功提交的结果；修改条件后请重新预测。",
+            "Last successful prediction. Run Predict again after changing inputs.",
         ))
+        show_result(**st.session_state["single_result"])
 
-        st.dataframe(
-            result,
-            hide_index=True,
+elif page == "batch":
+    st.subheader(t("CSV 批量预测", "Batch prediction from CSV"))
+    st.caption(t(
+        "下载模板，填写 CAS 和五项试验条件。每次支持 1–200 行。",
+        "Download the template and enter CAS numbers and five test conditions. "
+        "Upload 1–200 rows per batch.",
+    ))
+    left, right = st.columns(2, gap="large")
+    with left:
+        st.markdown(t("#### 1. 下载模板", "#### 1. Download template"))
+        example = pd.DataFrame(
+            [["50-06-6", 3, 1, 3, "LC50", 1.0]], columns=BATCH_COLUMNS,
+        )
+        st.download_button(
+            t("下载 CSV 模板", "Download CSV template"),
+            example.to_csv(index=False).encode("utf-8-sig"),
+            file_name="ppcp_batch_template.csv", mime="text/csv",
             use_container_width=True,
         )
-
-        st.download_button(
-            t(
-                "下载预测结果 CSV",
-                "Download prediction results (CSV)",
-            ),
-            result.to_csv(index=False).encode("utf-8-sig"),
-            file_name="ppcp_predictions.csv",
-            mime="text/csv",
-        )
-
         st.caption(t(
-            "错误行保留在结果中，具体原因见 error 列；"
-            "这些行未生成预测值。",
-            "Invalid rows are retained with details in the error column; "
-            "no predictions are generated for these rows.",
+            "保留英文列名；分类变量填写数字编码，终点填写 LC50 等原始名称。",
+            "Keep the English column names. Use numeric category codes "
+            "and endpoint names such as LC50.",
+        ))
+        with st.expander(t("查看分类编码", "View category codes")):
+            for heading, mapping in (
+                (t("物种组", "Species group"), SPECIES_LABELS),
+                (t("暴露类型", "Exposure type"), EXPOSURE_LABELS),
+                (t("介质类型", "Media type"), MEDIA_LABELS),
+            ):
+                st.write(heading)
+                st.write(" · ".join(f"{code}: {label}" for code, label in mapping.items()))
+            st.write(t("终点类型", "Endpoint types"))
+            st.write(", ".join(ENDPOINTS))
+    with right:
+        st.markdown(t("#### 2. 上传并预测", "#### 2. Upload and predict"))
+        upload = st.file_uploader(t("上传填好的 CSV", "Upload completed CSV"),
+                                  type=["csv"], key="batch_upload")
+        batch_submitted = st.button(t("开始批量预测", "Run batch prediction"),
+                                    type="primary", use_container_width=True)
+    if batch_submitted:
+        st.session_state.pop("batch_result", None)
+        if upload is None:
+            st.error(t("请先上传 CSV 文件。", "Please upload a CSV file first."))
+        else:
+            try:
+                upload.seek(0)
+                frame = pd.read_csv(upload, dtype={"CAS": str}, encoding="utf-8-sig")
+                st.session_state["batch_result"] = batch_predict(model, lookup, frame)
+            except (OSError, UnicodeError, pd.errors.ParserError, ValueError) as exc:
+                st.error(t("无法处理文件：", "Unable to process file: ") + error_text(exc))
+    if "batch_result" in st.session_state:
+        result = st.session_state["batch_result"]
+        successful = int(result["error"].eq("").sum())
+        failed = len(result) - successful
+        st.write(t(f"成功 {successful} 行；有错误 {failed} 行。",
+                   f"Successful rows: {successful}; invalid rows: {failed}."))
+        st.dataframe(result, hide_index=True, use_container_width=True)
+        st.download_button(
+            t("下载预测结果 CSV", "Download predictions CSV"),
+            result.to_csv(index=False).encode("utf-8-sig"),
+            file_name="ppcp_predictions.csv", mime="text/csv",
+        )
+        st.caption(t(
+            "错误行没有预测值，原因见 error 列；切换语言后请重新运行批量预测以更新错误说明。",
+            "Invalid rows have no prediction; see the error column. "
+            "Rerun the batch after changing language to update error messages.",
         ))
 
-with about_tab:
+else:
     st.subheader(t("模型与输入", "Model and inputs"))
 
     st.write(t(
@@ -609,6 +558,12 @@ with about_tab:
         "Duration limits: vertebrates, 4 days; "
         "invertebrates (excluding rotifers), 2 days; "
         "rotifers, 1 day; algae, 3 days.",
+    ))
+
+    st.caption(t(
+        "当前模型没有轮虫独立编码；界面按现有五类物种限制观测时长。",
+        "The current model has no separate rotifer code; duration limits "
+        "follow the five available species groups.",
     ))
 
     st.write(t(
