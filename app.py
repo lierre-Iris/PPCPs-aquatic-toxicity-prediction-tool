@@ -603,11 +603,12 @@ with about_tab:
         "concentration in mg/L.",
     ))
 
-    st.write(t(
-        "时长上限：脊椎动物 4 天，无脊椎动物（轮虫除外） 2 天，轮虫 1 天，藻类3 天，
-        "Duration limits: Vertebrates: 4 days; Rotifers: 1 day; Algae: 3 days
-        Invertebrates (excluding rotifers): 2 days "
-        "crustaceans and insects, 2 days. ",
+     st.write(t(
+        "时长上限：脊椎动物 4 天，无脊椎动物（轮虫除外）2 天，"
+        "轮虫 1 天，藻类 3 天。",
+        "Duration limits: vertebrates, 4 days; "
+        "invertebrates (excluding rotifers), 2 days; "
+        "rotifers, 1 day; algae, 3 days.",
     ))
 
     st.write(t(
