@@ -1,6 +1,10 @@
 """Bilingual PPCP aquatic effect-concentration predictor."""
 
 import base64
+import copy
+import time
+import uuid
+from datetime import datetime, timezone
 from pathlib import Path
 
 import pandas as pd
@@ -289,10 +293,153 @@ def batch_predict(model, lookup, source):
     return pd.DataFrame(rows)
 
 
+TASK_TTL_SECONDS = 24 * 60 * 60
+
+
+def prune_tasks(now=None):
+    """Expire this session's tasks. Previewing never extends retention."""
+    now = time.time() if now is None else now
+    tasks = st.session_state.setdefault("tasks", {})
+    expired = [key for key, task in tasks.items() if task["expires_at"] <= now]
+    for key in expired:
+        del tasks[key]
+    return len(expired)
+
+
+def add_task(kind, payload, submitted_at, source_name=""):
+    prune_tasks()
+    task_id = uuid.uuid4().hex
+    st.session_state["tasks"][task_id] = {
+        "kind": kind,
+        "created_at": submitted_at,
+        "expires_at": submitted_at + TASK_TTL_SECONDS,
+        "source_name": source_name,
+        "payload": copy.deepcopy(payload),
+    }
+    st.session_state["task_preview"] = task_id
+    return task_id
+
+
+def delete_tasks(task_ids):
+    tasks = st.session_state.setdefault("tasks", {})
+    count = 0
+    for task_id in set(task_ids):
+        if task_id in tasks:
+            del tasks[task_id]
+            count += 1
+    return count
+
+
+def task_time(timestamp):
+    return datetime.fromtimestamp(timestamp, timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
+
+
+@st.fragment(run_every="60s")
+def show_task_history():
+    # All saved result displays live inside this fragment, so cleanup also
+    # removes expired previews and download buttons from the current page.
+    expired_count = prune_tasks()
+    st.divider()
+    st.subheader(t("我的任务", "My tasks"))
+    st.caption(t(
+        "仅显示当前浏览器会话的任务。任务自提交起保留至多 24 小时；"
+        "页面活跃时每分钟检查过期任务。会话结束或服务重启可能提前清空记录。"
+        "请及时下载需要保存的结果。时间统一显示为 UTC。",
+        "Tasks belong to this browser session and expire 24 hours after submission. "
+        "Expiry is checked every minute while the session is active. "
+        "Ending the session or restarting the service may clear tasks earlier. "
+        "Download results you wish to keep. All timestamps are in UTC.",
+    ))
+    if expired_count:
+        st.info(t(f"已自动清理 {expired_count} 个过期任务。",
+                  f"Automatically removed {expired_count} expired task(s)."))
+    notice = st.session_state.pop("task_deleted_notice", 0)
+    if notice:
+        st.success(t(f"已删除 {notice} 个任务及其保存的结果。",
+                     f"Deleted {notice} task(s) and their saved results."))
+    tasks = st.session_state["tasks"]
+    if not tasks:
+        st.info(t("暂无任务。提交预测后，结果将出现在这里。",
+                  "No tasks yet. Submit a prediction to see its results here."))
+        return
+
+    task_ids = sorted(tasks, key=lambda key: tasks[key]["created_at"], reverse=True)
+    labels = {}
+    records = []
+    for task_id in task_ids:
+        task = tasks[task_id]
+        kind = t("单条", "Single") if task["kind"] == "single" else t("批量", "Batch")
+        summary = (task["payload"]["cas"] if task["kind"] == "single"
+                   else task["source_name"])
+        labels[task_id] = f"{task_id[:8]} · {kind} · {summary}"
+        records.append({
+            t("任务编号", "Task ID"): task_id[:8],
+            t("类型", "Type"): kind,
+            t("CAS / 文件", "CAS / File"): summary,
+            t("记录数", "Rows"): 1 if task["kind"] == "single" else len(task["payload"]),
+            t("提交时间", "Submitted"): task_time(task["created_at"]),
+            t("到期时间", "Expires"): task_time(task["expires_at"]),
+        })
+    st.dataframe(pd.DataFrame(records), hide_index=True, use_container_width=True)
+
+    # Repair selections before instantiating widgets after deletion or expiry.
+    if st.session_state.get("task_preview") not in tasks:
+        st.session_state["task_preview"] = task_ids[0]
+    st.session_state["tasks_to_delete"] = [
+        key for key in st.session_state.get("tasks_to_delete", []) if key in tasks
+    ]
+    selected = st.selectbox(t("选择任务预览", "Select a task to preview"), task_ids,
+                            format_func=lambda key: labels[key], key="task_preview")
+    to_delete = st.multiselect(
+        t("选择要删除的任务（可多选）", "Select tasks to delete (multiple allowed)"),
+        task_ids, format_func=lambda key: labels[key], key="tasks_to_delete",
+    )
+    if st.button(t("删除所选任务", "Delete selected tasks"),
+                 key="delete_selected_tasks", disabled=not to_delete):
+        st.session_state["task_deleted_notice"] = delete_tasks(to_delete)
+        st.rerun()
+    st.caption(t("删除后无法恢复；已下载到本地的文件不受影响。",
+                 "Deletion cannot be undone. Files already downloaded are unaffected."))
+
+    # Recheck at the moment of preview, in addition to the periodic sweep.
+    prune_tasks()
+    if selected not in tasks:
+        st.rerun()
+    task = tasks[selected]
+    st.caption(labels[selected] + " · " + t("到期：", "Expires: ")
+               + task_time(task["expires_at"]))
+    if task["kind"] == "single":
+        show_result(**task["payload"])
+    else:
+        result = task["payload"]
+        successful = int(result["error"].eq("").sum())
+        failed = len(result) - successful
+        st.write(t(f"成功 {successful} 行；有错误 {failed} 行。",
+                   f"Successful rows: {successful}; invalid rows: {failed}."))
+        st.dataframe(result, hide_index=True, use_container_width=True)
+        st.download_button(
+            t("下载预测结果 CSV", "Download predictions CSV"),
+            result.to_csv(index=False).encode("utf-8-sig"),
+            file_name=f"ppcp_predictions_{selected[:8]}.csv", mime="text/csv",
+            key=f"batch_download_{selected}",
+        )
+        st.caption(t(
+            "错误行没有预测值，原因见 error 列。错误说明保留提交时的语言。",
+            "Invalid rows have no prediction; see the error column. "
+            "Error messages keep the language used at submission.",
+        ))
+
+
+
 st.set_page_config(
     page_title="PPCPs | Predictor", page_icon="🧪",
     layout="wide", initial_sidebar_state="expanded",
 )
+
+# Clear obsolete one-result storage; all new results live in tasks only.
+st.session_state.pop("single_result", None)
+st.session_state.pop("batch_result", None)
+prune_tasks()
 
 with st.sidebar:
     st.markdown("## 🧪 PPCPs")
@@ -442,7 +589,7 @@ if page == "single":
             st.caption(t("✓ 已匹配四种分子描述符。", "✓ Four molecular descriptors matched."))
 
     if submitted:
-        st.session_state.pop("single_result", None)
+        submitted_at = time.time()
         try:
             log_value, descriptors = predict(
                 model, lookup, clean_cas, species, exposure, medium, endpoint, duration,
@@ -450,18 +597,15 @@ if page == "single":
         except ValueError as exc:
             st.error(error_text(exc))
         else:
-            st.session_state["single_result"] = dict(
+            result_payload = dict(
                 log_value=log_value, descriptors=descriptors, cas=clean_cas,
                 species=species, endpoint=endpoint, exposure=exposure,
                 medium=medium, duration=duration,
             )
 
-    if "single_result" in st.session_state:
-        st.caption(t(
-            "以下为上次成功提交的结果；修改条件后请重新预测。",
-            "Last successful prediction. Run Predict again after changing inputs.",
-        ))
-        show_result(**st.session_state["single_result"])
+            add_task("single", result_payload, submitted_at)
+            st.success(t("预测已完成，请在下方“我的任务”中查看。",
+                         "Prediction complete. View it in My tasks below."))
 
 elif page == "batch":
     st.subheader(t("CSV 批量预测", "Batch prediction from CSV"))
@@ -504,33 +648,19 @@ elif page == "batch":
         batch_submitted = st.button(t("开始批量预测", "Run batch prediction"),
                                     type="primary", use_container_width=True)
     if batch_submitted:
-        st.session_state.pop("batch_result", None)
+        submitted_at = time.time()
         if upload is None:
             st.error(t("请先上传 CSV 文件。", "Please upload a CSV file first."))
         else:
             try:
                 upload.seek(0)
                 frame = pd.read_csv(upload, dtype={"CAS": str}, encoding="utf-8-sig")
-                st.session_state["batch_result"] = batch_predict(model, lookup, frame)
+                result = batch_predict(model, lookup, frame)
+                add_task("batch", result, submitted_at, source_name=upload.name)
+                st.success(t("批量预测已完成，请在下方“我的任务”中查看。",
+                             "Batch complete. View it in My tasks below."))
             except (OSError, UnicodeError, pd.errors.ParserError, ValueError) as exc:
                 st.error(t("无法处理文件：", "Unable to process file: ") + error_text(exc))
-    if "batch_result" in st.session_state:
-        result = st.session_state["batch_result"]
-        successful = int(result["error"].eq("").sum())
-        failed = len(result) - successful
-        st.write(t(f"成功 {successful} 行；有错误 {failed} 行。",
-                   f"Successful rows: {successful}; invalid rows: {failed}."))
-        st.dataframe(result, hide_index=True, use_container_width=True)
-        st.download_button(
-            t("下载预测结果 CSV", "Download predictions CSV"),
-            result.to_csv(index=False).encode("utf-8-sig"),
-            file_name="ppcp_predictions.csv", mime="text/csv",
-        )
-        st.caption(t(
-            "错误行没有预测值，原因见 error 列；切换语言后请重新运行批量预测以更新错误说明。",
-            "Invalid rows have no prediction; see the error column. "
-            "Rerun the batch after changing language to update error messages.",
-        ))
 
 else:
     st.subheader(t("模型与输入", "Model and inputs"))
@@ -584,6 +714,8 @@ else:
         "definitions. Interpret each result together with its endpoint "
         "and test conditions.",
     ))
+
+show_task_history()
 
 st.divider()
 st.caption(t(
