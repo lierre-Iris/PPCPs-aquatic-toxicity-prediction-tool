@@ -725,3 +725,15 @@ st.caption(t(
 ))
 
 # END OF APP
+# Experimental data contribution section
+from contributions import render_contribution_portal
+
+st.divider()
+
+with st.expander(
+    "🧬 Contribute experimental data"
+    if st.session_state.get("language", "中文") == "English"
+    else "🧬 提交实验数据，共同完善预测模型",
+    expanded=False,
+):
+    render_contribution_portal()
